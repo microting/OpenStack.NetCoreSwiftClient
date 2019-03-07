@@ -1,0 +1,13 @@
+dist: xenial
+branches:
+  only:
+    - master
+language: csharp
+solution: OpenStack.NetCoreSwiftClient.sln
+mono: none
+dotnet: 2.2
+services:
+- mysql
+script:
+  - dotnet restore
+  - dotnet build OpenStack.NetCoreSwiftClient.sln
