@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using OpenStack.NetCoreSwiftClient.Helpers;
 
 namespace OpenStack.NetCoreSwiftClient
 {
@@ -16,39 +17,21 @@ namespace OpenStack.NetCoreSwiftClient
         private readonly HttpClient _Client = new HttpClient();
         private string _Token;
         private string Token { get => DateTime.UtcNow < TokenExpiresAt ? _Token : null; set => _Token = value; }
-        //public string UserName = "";
-        //public string Password = "";
+        private readonly SwiftLogging _swiftLogging = new SwiftLogging();
+        private readonly Tools _tools = new Tools();
+
         private DateTime TokenExpiresAt { get; set; }
 
         #region Identity/Authentication
-        //public Task<SwiftAuthV3Response> AuthenticateAsync(string authUrl, string name, string password, string domain = "Default")
-        //{
-        //    var reqObj = new SwiftAuthV3Request(name, password, domain);
-        //    return AuthenticateAsync(authUrl, reqObj);
-        //}
-
-        //public Task<SwiftAuthV3Response> AuthenticateTokenAsync(string authUrl, string token)
-        //{
-        //    var reqObj = new SwiftAuthV3Request(token);
-        //    return AuthenticateAsync(authUrl, reqObj);
-        //}
 
         #region V2.0
 
         public Task<SwiftAuthV2Response> AuthenticateAsyncV2(string authUrl, string name, string password)
         {
             var reqObj = new SwiftAuthV2Request(name, password);
-            //UserName = name;
-            //Password = password;
             return AuthenticateAsyncV2(authUrl, reqObj);
 
         }
-
-        //public Task<SwiftAuthV2Response> AuthenticateTokenAsyncV2(string authUrl, string token)
-        //{
-        //    var reqObj = new SwiftAuthV2Request(token);
-        //    return AuthenticateAsyncV2(authUrl, reqObj);
-        //}
 
         public async Task<SwiftAuthV2Response> AuthenticateAsyncV2(string authUrl, SwiftAuthV2Request reqObj)
         {
@@ -59,13 +42,17 @@ namespace OpenStack.NetCoreSwiftClient
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore
             });
+            
             var content = new StringContent(contentStr);
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            
             try
             {
+                _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "Posting to " + tokenUrl);
                 var resp = await _Client.PostAsync(tokenUrl, content);
                 if (resp.IsSuccessStatusCode)
                 {
+                    _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "Authentication succeeded");
                     var respTxt = await resp.Content.ReadAsStringAsync();
 
                     var result = new SwiftAuthV2Response()
@@ -79,8 +66,6 @@ namespace OpenStack.NetCoreSwiftClient
                         ContentStr = respTxt
                     };
                     InitToken(result.ContentObject.Access.Token.Id, result.TokenExpires);
-                    //UserName = reqObj.Auth.PasswordCredentials.Username;
-                    //Password = reqObj.Auth.PasswordCredentials.Password;
                     return result;
                 }
 
@@ -98,6 +83,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 return new SwiftAuthV2Response()
                 {
                     ContentLength = 0,
@@ -115,6 +101,8 @@ namespace OpenStack.NetCoreSwiftClient
 
         public void InitToken(string token, DateTime? expiresAt = null)
         {
+            _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "New token " + token);
+            _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "New token expires as " + expiresAt.ToString());
             Token = token;
             TokenExpiresAt = expiresAt ?? DateTime.MaxValue;
         }
@@ -475,6 +463,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -490,10 +479,6 @@ namespace OpenStack.NetCoreSwiftClient
             HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Get, url);
             req.FillTokenHeader(Token);
 
-            //req.Headers.Add("X-Auth-User", UserName);
-            //req.Headers.Add("X-Auth-Key", Password);
-
-
             try
             {
                 var resp = await _Client.SendAsync(req);
@@ -503,6 +488,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -524,6 +510,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -546,6 +533,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -578,6 +566,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -609,6 +598,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -647,6 +637,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
@@ -683,6 +674,7 @@ namespace OpenStack.NetCoreSwiftClient
             }
             catch (Exception exc)
             {
+                _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), exc.Message);
                 T result = (T)Activator.CreateInstance(typeof(T));
                 result.ContentLength = 0;
                 result.IsSuccess = false;
