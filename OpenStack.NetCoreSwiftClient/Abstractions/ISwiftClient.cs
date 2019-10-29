@@ -13,7 +13,7 @@ namespace OpenStack.NetCoreSwiftClient.Abstractions
         Task<SwiftAccountDetailsResponse> AccountListContainersAsync(string objectStoreUrl, int? limit = null, string marker = null, string endMarker = null, string format = null, string prefix = null, string delimiter = null);
         Task<SwiftBaseResponse> AccountPostAsync(string objectStoreUrl, Dictionary<string, string> metaValues = null, Dictionary<string, string> additionalHeaders = null);
         Task<SwiftBaseResponse> AccountSetTempUrlKeyAsync(string objectStoreUrl, string key, bool firstKey = true);
-        Task<SwiftAuthV2Response> AuthenticateAsyncV2(string authUrl, string name, string password);
+        SwiftAuthV2Response AuthenticateAsyncV2(string authUrl, string name, string password);
         Task<SwiftBaseResponse> ContainerDeleteAsync(string objectStoreUrl, string container);
         Task<SwiftContainerInfoResponse> ContainerGetAsync(string objectStoreUrl, string container);
         Task<SwiftContainerInfoResponse> ContainerHeadAsync(string objectStoreUrl, string container);

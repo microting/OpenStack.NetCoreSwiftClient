@@ -6,6 +6,7 @@ using OpenStack.NetCoreSwiftClient.Infrastructure.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using OpenStack.NetCoreSwiftClient.Helpers;
@@ -26,14 +27,14 @@ namespace OpenStack.NetCoreSwiftClient
 
         #region V2.0
 
-        public Task<SwiftAuthV2Response> AuthenticateAsyncV2(string authUrl, string name, string password)
+        public SwiftAuthV2Response AuthenticateAsyncV2(string authUrl, string name, string password)
         {
             var reqObj = new SwiftAuthV2Request(name, password);
             return AuthenticateAsyncV2(authUrl, reqObj);
 
         }
 
-        public async Task<SwiftAuthV2Response> AuthenticateAsyncV2(string authUrl, SwiftAuthV2Request reqObj)
+        public SwiftAuthV2Response AuthenticateAsyncV2(string authUrl, SwiftAuthV2Request reqObj)
         {
             var tokenUrl = $"{authUrl}/tokens";
 
@@ -45,15 +46,15 @@ namespace OpenStack.NetCoreSwiftClient
             
             var content = new StringContent(contentStr);
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-            
+
             try
             {
                 _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "Posting to " + tokenUrl);
-                var resp = await _Client.PostAsync(tokenUrl, content);
+                var resp = _Client.PostAsync(tokenUrl, content).Result;
                 if (resp.IsSuccessStatusCode)
                 {
                     _swiftLogging.LogDebug(_tools.GetMethodName("SwiftClient"), "Authentication succeeded");
-                    var respTxt = await resp.Content.ReadAsStringAsync();
+                    var respTxt = resp.Content.ReadAsStringAsync();
 
                     var result = new SwiftAuthV2Response()
                     {
@@ -62,15 +63,31 @@ namespace OpenStack.NetCoreSwiftClient
                         Headers = resp.Headers.ToDictionary(),
                         Reason = resp.ReasonPhrase,
                         StatusCode = resp.StatusCode,
-                        ContentObject = JsonConvert.DeserializeObject<SwiftAuthV2Response.TokenContainerObject>(respTxt),
-                        ContentStr = respTxt
+                        ContentObject =
+                            JsonConvert.DeserializeObject<SwiftAuthV2Response.TokenContainerObject>(respTxt.Result),
+                        ContentStr = respTxt.Result
                     };
                     InitToken(result.ContentObject.Access.Token.Id, result.TokenExpires);
                     return result;
                 }
+                else
+                {
+                    _swiftLogging.LogCritical(_tools.GetMethodName("SwiftClient"), resp.StatusCode.ToString());
+                    if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        return new SwiftAuthV2Response()
+                        {
+                            ContentLength = 0,
+                            IsSuccess = false,
+                            Headers = new Dictionary<string, string>(),
+                            Reason = "Unauthorized. Check credentials!",
+                            StatusCode = System.Net.HttpStatusCode.Unauthorized,
+                        };
+                    }
+                }
 
                 var length = resp.Content?.Headers?.ContentLength ?? 0;
-                var respTxt2 = length > 0 ? await resp.Content.ReadAsStringAsync() : null;
+                var respTxt2 = length > 0 ? resp.Content.ReadAsStringAsync() : null;
                 return new SwiftAuthV2Response()
                 {
                     ContentLength = length,
@@ -78,7 +95,7 @@ namespace OpenStack.NetCoreSwiftClient
                     Headers = resp.Headers.ToDictionary(),
                     Reason = resp.ReasonPhrase,
                     StatusCode = resp.StatusCode,
-                    ContentStr = respTxt2
+                    ContentStr = respTxt2.Result
                 };
             }
             catch (Exception exc)

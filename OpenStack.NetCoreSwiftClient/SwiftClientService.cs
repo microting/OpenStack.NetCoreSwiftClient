@@ -22,7 +22,7 @@ namespace OpenStack.NetCoreSwiftClient
             Config = config;
             if (!config.Token.IsNullOrEmpty()) Token = config.Token;
         }
-        public Task<SwiftAuthV2Response> AuthenticateAsync()
+        public SwiftAuthV2Response AuthenticateAsync()
             => AuthenticateAsyncV2(Config.AuthUrl, Config.Name, Config.Password);
 
 
